@@ -58,7 +58,7 @@ def get_weather():
 
     api_key = os.getenv("OPENWEATHER_API_KEY")
 
-    city = "Kolkata"
+    city = "Haldia"
 
     url = (
         f"https://api.openweathermap.org/data/2.5/weather"
