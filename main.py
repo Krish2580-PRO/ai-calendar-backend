@@ -1,39 +1,89 @@
 from fastapi import FastAPI
-from google.auth.transport.requests import Request
+
+import requests
+import os
+import json
+import datetime
+
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
-import datetime
-import os.path
-import requests
-
 app = FastAPI()
+
+# =====================================
+# GOOGLE CALENDAR CONFIG
+# =====================================
 
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
+
 def get_calendar_service():
 
-    creds = None
+    token_info = json.loads(
+        os.getenv("GOOGLE_TOKEN")
+    )
 
-    if os.path.exists("token.json"):
-        creds = Credentials.from_authorized_user_file(
-            "token.json",
-            SCOPES
-        )
+    creds = Credentials.from_authorized_user_info(
+        token_info,
+        SCOPES
+    )
 
-    if creds and creds.expired and creds.refresh_token:
-        creds.refresh(Request())
-
-    service = build("calendar", "v3", credentials=creds)
+    service = build(
+        "calendar",
+        "v3",
+        credentials=creds
+    )
 
     return service
+
+
+# =====================================
+# ROOT ROUTE
+# =====================================
 
 @app.get("/")
 def home():
 
     return {
-        "message": "AI Calendar Assistant Backend Running"
+        "message": "ESP32 AI Assistant Backend Running"
     }
+
+
+# =====================================
+# WEATHER ROUTE
+# =====================================
+
+@app.get("/weather")
+def get_weather():
+
+    api_key = os.getenv("OPENWEATHER_API_KEY")
+
+    city = "Kolkata"
+
+    url = (
+        f"https://api.openweathermap.org/data/2.5/weather"
+        f"?q={city}"
+        f"&appid={api_key}"
+        f"&units=metric"
+    )
+
+    response = requests.get(url)
+
+    data = response.json()
+
+    return {
+        "city": city,
+        "temp": round(data["main"]["temp"]),
+        "humidity": data["main"]["humidity"],
+        "condition": data["weather"][0]["main"],
+        "wind": round(data["wind"]["speed"]),
+        "feels_like": round(data["main"]["feels_like"])
+    }
+
+
+# =====================================
+# CALENDAR ROUTE
+# =====================================
 
 @app.get("/get_events")
 def get_events():
@@ -57,42 +107,12 @@ def get_events():
     for event in events:
 
         formatted_events.append({
+            "title": event.get("summary", "No Title"),
+
             "start": event["start"].get(
                 "dateTime",
                 event["start"].get("date")
-            ),
-            "title": event.get("summary", "No Title")
+            )
         })
 
     return formatted_events
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
-
-@app.get("/weather")
-def get_weather():
-
-    api_key = "e4801ed7d319483ccd046026e9182882"
-
-    city = "Haldia"
-
-    url = (
-        f"https://api.openweathermap.org/data/2.5/weather"
-        f"?q={city}"
-        f"&appid={api_key}"
-        f"&units=metric"
-    )
-
-    response = requests.get(url)
-
-    data = response.json()
-
-    return {
-        "city": city,
-        "temp": round(data["main"]["temp"]),
-        "humidity": data["main"]["humidity"],
-        "condition": data["weather"][0]["main"],
-        "wind": round(data["wind"]["speed"]),
-        "feels_like": round(data["main"]["feels_like"])
-    }
