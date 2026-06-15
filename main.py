@@ -60,24 +60,65 @@ def get_weather():
 
     city = "Haldia"
 
-    url = (
+    current_url = (
         f"https://api.openweathermap.org/data/2.5/weather"
         f"?q={city}"
         f"&appid={api_key}"
         f"&units=metric"
     )
 
-    response = requests.get(url)
+    forecast_url = (
+        f"https://api.openweathermap.org/data/2.5/forecast"
+        f"?q={city}"
+        f"&appid={api_key}"
+        f"&units=metric"
+    )
 
-    data = response.json()
+    current_response = requests.get(current_url)
+
+    forecast_response = requests.get(forecast_url)
+
+    current_data = current_response.json()
+
+    forecast_data = forecast_response.json()
+
+    daily_forecast = []
+
+    added_days = set()
+
+    for item in forecast_data["list"]:
+
+        date = item["dt_txt"].split(" ")[0]
+
+        if date not in added_days:
+
+            added_days.add(date)
+
+            daily_forecast.append({
+                "day": date,
+                "temp": round(item["main"]["temp"]),
+                "condition": item["weather"][0]["main"]
+            })
+
+        if len(daily_forecast) >= 7:
+            break
 
     return {
         "city": city,
-        "temp": round(data["main"]["temp"]),
-        "humidity": data["main"]["humidity"],
-        "condition": data["weather"][0]["main"],
-        "wind": round(data["wind"]["speed"]),
-        "feels_like": round(data["main"]["feels_like"])
+
+        "temp": round(current_data["main"]["temp"]),
+
+        "humidity": current_data["main"]["humidity"],
+
+        "condition": current_data["weather"][0]["main"],
+
+        "wind": round(current_data["wind"]["speed"]),
+
+        "feels_like": round(
+            current_data["main"]["feels_like"]
+        ),
+
+        "forecast": daily_forecast
     }
 
 
