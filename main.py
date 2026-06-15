@@ -5,6 +5,7 @@ from googleapiclient.discovery import build
 
 import datetime
 import os.path
+import requests
 
 app = FastAPI()
 
@@ -68,3 +69,30 @@ def get_events():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+@app.get("/weather")
+def get_weather():
+
+    api_key = "e4801ed7d319483ccd046026e9182882"
+
+    city = "Haldia"
+
+    url = (
+        f"https://api.openweathermap.org/data/2.5/weather"
+        f"?q={city}"
+        f"&appid={api_key}"
+        f"&units=metric"
+    )
+
+    response = requests.get(url)
+
+    data = response.json()
+
+    return {
+        "city": city,
+        "temp": round(data["main"]["temp"]),
+        "humidity": data["main"]["humidity"],
+        "condition": data["weather"][0]["main"],
+        "wind": round(data["wind"]["speed"]),
+        "feels_like": round(data["main"]["feels_like"])
+    }
