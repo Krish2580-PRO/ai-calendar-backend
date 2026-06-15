@@ -147,13 +147,28 @@ def get_events():
 
     for event in events:
 
+        start_raw = event["start"].get(
+            "dateTime",
+            event["start"].get("date")
+        )
+
+        try:
+            dt = datetime.datetime.fromisoformat(
+                start_raw.replace("Z", "+00:00")
+            )
+
+            formatted_date = dt.strftime("%d-%m-%Y")
+
+            formatted_time = dt.strftime("%I:%M %p")
+
+        except:
+            formatted_date = start_raw
+            formatted_time = "All Day"
+
         formatted_events.append({
             "title": event.get("summary", "No Title"),
-
-            "start": event["start"].get(
-                "dateTime",
-                event["start"].get("date")
-            )
+            "date": formatted_date,
+            "time": formatted_time
         })
 
     return formatted_events
