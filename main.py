@@ -275,10 +275,8 @@ def next_event():
 
     service = get_calendar_service()
 
-    now = (
-        datetime.datetime.now(
-            datetime.timezone.utc
-        )
+    now = datetime.datetime.now(
+        datetime.timezone.utc
     )
 
     events_result = (
@@ -286,7 +284,7 @@ def next_event():
         .list(
             calendarId="primary",
             timeMin=now.isoformat(),
-            maxResults=1,
+            maxResults=20,
             singleEvents=True,
             orderBy="startTime"
         )
@@ -298,75 +296,82 @@ def next_event():
         []
     )
 
-    if not events:
+    # =====================================
+    # FIND FIRST TIMED EVENT
+    # =====================================
 
-        return {
-            "title": "No Upcoming Events",
-            "date": "",
-            "time": "",
-            "minutes_remaining": -1
-        }
+    for event in events:
 
-    event = events[0]
+        # Skip birthdays/all-day events
+        if "dateTime" not in event["start"]:
+            continue
 
-    start_raw = event["start"].get(
-        "dateTime",
-        event["start"].get("date")
-    )
+        start_raw = event["start"]["dateTime"]
 
-    try:
+        try:
 
-        event_dt = (
-            datetime.datetime
-            .fromisoformat(
-                start_raw.replace(
-                    "Z",
-                    "+00:00"
+            event_dt = (
+                datetime.datetime
+                .fromisoformat(
+                    start_raw.replace(
+                        "Z",
+                        "+00:00"
+                    )
                 )
             )
-        )
 
-        minutes_remaining = int(
-            (
-                event_dt - now
-            ).total_seconds() / 60
-        )
+            minutes_remaining = int(
+                (
+                    event_dt - now
+                ).total_seconds() / 60
+            )
 
-        return {
+            return {
 
-            "title":
-            event.get(
-                "summary",
-                "No Title"
-            ),
+                "title":
+                event.get(
+                    "summary",
+                    "No Title"
+                ),
 
-            "date":
-            event_dt.strftime(
-                "%d-%m-%Y"
-            ),
+                "date":
+                event_dt.strftime(
+                    "%d-%m-%Y"
+                ),
 
-            "time":
-            event_dt.strftime(
-                "%I:%M %p"
-            ),
+                "time":
+                event_dt.strftime(
+                    "%I:%M %p"
+                ),
 
-            "minutes_remaining":
-            minutes_remaining
-        }
+                "minutes_remaining":
+                minutes_remaining
+            }
 
-    except Exception as e:
+        except Exception as e:
 
-        return {
+            print(
+                "NEXT EVENT ERROR:",
+                e
+            )
 
-            "title":
-            event.get(
-                "summary",
-                "No Title"
-            ),
+            continue
 
-            "date": "",
+    # =====================================
+    # NO TIMED EVENTS FOUND
+    # =====================================
 
-            "time": "",
+    return {
 
-            "minutes_remaining": -1
-        }
+        "title":
+        "No Upcoming Events",
+
+        "date":
+        "",
+
+        "time":
+        "",
+
+        "minutes_remaining":
+        -1
+    }
