@@ -4,6 +4,7 @@ import requests
 import os
 import json
 import datetime
+from datetime import timezone
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -264,3 +265,108 @@ def get_events():
         })
 
     return formatted_events
+
+# ======================================================
+# NEXT EVENT ROUTE
+# ======================================================
+
+@app.get("/next_event")
+def next_event():
+
+    service = get_calendar_service()
+
+    now = (
+        datetime.datetime.now(
+            datetime.timezone.utc
+        )
+    )
+
+    events_result = (
+        service.events()
+        .list(
+            calendarId="primary",
+            timeMin=now.isoformat(),
+            maxResults=1,
+            singleEvents=True,
+            orderBy="startTime"
+        )
+        .execute()
+    )
+
+    events = events_result.get(
+        "items",
+        []
+    )
+
+    if not events:
+
+        return {
+            "title": "No Upcoming Events",
+            "date": "",
+            "time": "",
+            "minutes_remaining": -1
+        }
+
+    event = events[0]
+
+    start_raw = event["start"].get(
+        "dateTime",
+        event["start"].get("date")
+    )
+
+    try:
+
+        event_dt = (
+            datetime.datetime
+            .fromisoformat(
+                start_raw.replace(
+                    "Z",
+                    "+00:00"
+                )
+            )
+        )
+
+        minutes_remaining = int(
+            (
+                event_dt - now
+            ).total_seconds() / 60
+        )
+
+        return {
+
+            "title":
+            event.get(
+                "summary",
+                "No Title"
+            ),
+
+            "date":
+            event_dt.strftime(
+                "%d-%m-%Y"
+            ),
+
+            "time":
+            event_dt.strftime(
+                "%I:%M %p"
+            ),
+
+            "minutes_remaining":
+            minutes_remaining
+        }
+
+    except Exception as e:
+
+        return {
+
+            "title":
+            event.get(
+                "summary",
+                "No Title"
+            ),
+
+            "date": "",
+
+            "time": "",
+
+            "minutes_remaining": -1
+        }
